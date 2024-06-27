@@ -26,6 +26,7 @@ async fn chat(client: & mut ChatServiceClient<Channel>) {
 
     let in_stream = ReceiverStream::new(rx);
 
+    // create a new thread to get user's inputs
     tokio::spawn(async move {
         loop {
             let user_msg = input().await;
@@ -37,6 +38,7 @@ async fn chat(client: & mut ChatServiceClient<Channel>) {
                     from: String::from("Client")
                 };
 
+                // input will be sent to `in_stream` thread
                 if tx.send(msg).await.is_err() {
                     break;
                 }
@@ -44,6 +46,7 @@ async fn chat(client: & mut ChatServiceClient<Channel>) {
         }
     });
 
+    // call `chat_message_streaming` method (gRPC)
     let response = client
         .chat_message_streaming(Request::new(in_stream))
         .await
@@ -59,12 +62,14 @@ async fn chat(client: & mut ChatServiceClient<Channel>) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // create client instance by connect to the server at ...5051
     let mut client = ChatServiceClient::connect("http://[::1]:5051")
         .await
         .unwrap();
 
     println!("Client Started...!");
 
+    // chat stream goes here
     chat(&mut client).await;
     Ok(())
 }
